@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <json/json.h>
+#include <arpa/inet.h>
 #include "ipdb.h"
 
 int is_big_endian(void) {
@@ -140,4 +141,81 @@ void ipdb_reader_free(ipdb_reader **reader) {
     }
     free(*reader);
     *reader = 0;
+}
+
+int ipdb_reader_is_ipv4_support(ipdb_reader *reader) {
+    return (((int) reader->meta->ip_version) & IPv4) == IPv4;
+
+}
+
+int ipdb_reader_is_ipv6_support(ipdb_reader *reader) {
+    return (((int) reader->meta->ip_version) & IPv6) == IPv6;
+
+}
+
+int ipdb_resolve(ipdb_reader *reader, int node, const char **bytes) {
+    int resolved = node - reader->meta->node_count + reader->meta->node_count * 8;
+    if (resolved >= reader->file_size) {
+        return ErrDatabaseError;
+    }
+
+    int size = (reader->data[resolved] << 8) | reader->data[resolved + 2];
+    if ((resolved + 2 + size) > reader->data_size) {
+        return ErrDatabaseError;
+    }
+    *bytes = (const char *) reader->data + resolved + 2;
+    return ErrNoErr;
+}
+
+int ipdb_search(ipdb_reader *reader, const u_char *ip, int bit_count, int *node) {
+    *node = 0;
+
+    if (bit_count == 32) {
+        *node = reader->v4offset;
+    } else {
+        *node = 0;
+    }
+
+    for (int i = 0; i < bit_count; ++i) {
+        if (*node > reader->meta->node_count) {
+            break;
+        }
+
+        *node = ipdb_read_node(reader, *node,
+                               ((0xFF & ((int) ip[i >> 3])) >> (unsigned int) (7 - (i % 8))) & 1);
+    }
+
+    if (*node > reader->meta->node_count) {
+        return ErrNoErr;
+    }
+    return ErrDataNotExists;
+}
+
+int ipdb_find0(ipdb_reader *reader, const char *addr, const char **body) {
+    int node = 0;
+    int err;
+    struct in_addr addr4;
+    struct in6_addr addr6;
+    if (inet_pton(AF_INET, addr, &addr4)) {
+        if (!ipdb_reader_is_ipv4_support(reader)) {
+            return ErrNoSupportIPv4;
+        }
+        err = ipdb_search(reader, (const u_char *) &addr4.s_addr, 32, &node);
+        if (err != ErrNoErr) {
+            return err;
+        }
+    } else if (inet_pton(AF_INET6, addr, &addr6)) {
+        if (!ipdb_reader_is_ipv6_support(reader)) {
+            return ErrNoSupportIPv6;
+        }
+        err = ipdb_search(reader, (const u_char *) &addr6.s6_addr, 128, &node);
+        if (err != ErrNoErr) {
+            return err;
+        }
+    } else {
+        return ErrIPFormat;
+    }
+    err = ipdb_resolve(reader, node, body);
+
+    return err;
 }

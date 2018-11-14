@@ -40,15 +40,21 @@ typedef struct ipdb_meta_data {
 } ipdb_meta_data;
 
 typedef struct ipdb_reader {
-    ipdb_meta_data* meta;
+    ipdb_meta_data *meta;
     int v4offset;
     int file_size;
     int data_size;
-    unsigned char* data;
+    unsigned char *data;
 } ipdb_reader;
 
 int ipdb_reader_new(const char *file, ipdb_reader **reader);
 
 void ipdb_reader_free(ipdb_reader **reader);
+
+int ipdb_reader_is_ipv4_support(ipdb_reader *reader);
+
+int ipdb_reader_is_ipv6_support(ipdb_reader *reader);
+
+int ipdb_find0(ipdb_reader *reader, const char *addr, const char **body);
 
 #endif //IPDB_C_IPDB_H
