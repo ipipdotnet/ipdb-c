@@ -50,7 +50,7 @@ ipdb_meta_data *parse_meta_data(const char *meta_json) {
     for (int i = 0; i < meta_data->language_length; ++i) {
         strcpy(meta_data->language[i].name, json_object_iter_peek_name(&language));
         struct json_object *it = json_object_iter_peek_value(&language);
-        meta_data->language[i].count = json_object_get_int(it);
+        meta_data->language[i].offset = json_object_get_int(it);
         json_object_iter_next(&language);
     }
     json_object_iter_end(value);
@@ -96,7 +96,7 @@ int ipdb_reader_new(const char *file, ipdb_reader **reader) {
     printf("\n");
     printf("language: ");
     for (int i = 0; i < rd->meta->language_length; ++i) {
-        printf("%s: %d ", rd->meta->language[i].name, rd->meta->language[i].count);
+        printf("%s: %d ", rd->meta->language[i].name, rd->meta->language[i].offset);
     }
     printf("\n");
     if (rd->meta->language_length == 0 || rd->meta->fields_length == 0) {
@@ -193,7 +193,7 @@ int ipdb_search(ipdb_reader *reader, const u_char *ip, int bit_count, int *node)
 
 int ipdb_find0(ipdb_reader *reader, const char *addr, const char **body) {
     int node = 0;
-    int err;
+    int err = ErrNoErr;
     struct in_addr addr4;
     struct in6_addr addr6;
     if (inet_pton(AF_INET, addr, &addr4)) {
@@ -216,6 +216,92 @@ int ipdb_find0(ipdb_reader *reader, const char *addr, const char **body) {
         return ErrIPFormat;
     }
     err = ipdb_resolve(reader, node, body);
-
     return err;
+}
+
+int split(const char *src, const char sp, char ***result) {
+    int sum = 1;
+    const char *c = src;
+    while (*c) {
+        if (*c == '\t')++sum;
+        ++c;
+    }
+    *result = malloc(sizeof(char *) * sum);
+    int i = 0;
+    size_t pos = 0;
+    c = src;
+    while (*(c + pos)) {
+        if (*(c + pos) == sp) {
+            (*result)[i] = malloc(pos + 1);
+            strncpy((*result)[i], c, pos);
+            (*result)[i][pos] = 0;
+            ++i;
+            c = c + pos + 1;
+            pos = 0;
+            continue;
+        }
+        ++pos;
+    }
+    size_t len = strlen(c);
+    (*result)[i] = malloc(len + 1);
+    if (len) strncpy((*result)[i], c, len);
+    (*result)[i][len] = 0;
+    return sum;
+}
+
+int ipdb_find1(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_vector **body) {
+    int err;
+    int off = -1;
+    for (int i = 0; i < reader->meta->language_length; ++i) {
+        if (strcmp(language, reader->meta->language[i].name) == 0) {
+            off = reader->meta->language[i].offset;
+            break;
+        }
+    }
+    if (off == -1) {
+        return ErrNoSupportLanguage;
+    }
+    const char *content;
+    err = ipdb_find0(reader, addr, &content);
+    if (err != ErrNoErr) {
+        return err;
+    }
+
+    char **tmp;
+    int sum = split(content, '\t', &tmp);
+    if (off + reader->meta->fields_length > sum) {
+        err = ErrDatabaseError;
+    } else {
+        ipdb_string_vector *root = malloc(sizeof(ipdb_string_vector));
+        ipdb_string_vector *vector = root;
+        for (int i = off; i < off + reader->meta->fields_length; ++i) {
+            vector->str = malloc(strlen(tmp[i]) + 1);
+            strcpy(vector->str, tmp[i]);
+            if (i == off + reader->meta->fields_length - 1)break;
+            vector->next = malloc(sizeof(ipdb_string_vector));
+            vector = vector->next;
+            memset(vector, 0, sizeof(ipdb_string_vector));
+        }
+        *body = root;
+        err = ErrNoErr;
+    }
+    for (int i = 0; i < sum; ++i) {
+        free(tmp[i]);
+    }
+    free(tmp);
+    return err;
+}
+
+int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_vector **body) {
+    return ipdb_find1(reader, addr, language, body);
+}
+
+void ipdb_string_vector_free(ipdb_string_vector **body) {
+    ipdb_string_vector *next = *body;
+    while (next) {
+        ipdb_string_vector *temp = next->next;
+        free(next);
+        next = temp;
+    }
+    *body = 0;
 }

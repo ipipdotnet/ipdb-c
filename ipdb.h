@@ -25,7 +25,7 @@
 
 typedef struct ipdb_meta_data_language {
     char name[8];
-    int count;
+    int offset;
 } ipdb_meta_data_language;
 
 typedef struct ipdb_meta_data {
@@ -47,6 +47,11 @@ typedef struct ipdb_reader {
     unsigned char *data;
 } ipdb_reader;
 
+typedef struct ipdb_string_vector {
+    char *str;
+    struct ipdb_string_vector *next;
+} ipdb_string_vector;
+
 int ipdb_reader_new(const char *file, ipdb_reader **reader);
 
 void ipdb_reader_free(ipdb_reader **reader);
@@ -55,6 +60,8 @@ int ipdb_reader_is_ipv4_support(ipdb_reader *reader);
 
 int ipdb_reader_is_ipv6_support(ipdb_reader *reader);
 
-int ipdb_find0(ipdb_reader *reader, const char *addr, const char **body);
+int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_vector **body);
+
+void ipdb_string_vector_free(ipdb_string_vector **body);
 
 #endif //IPDB_C_IPDB_H
