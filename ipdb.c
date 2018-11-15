@@ -77,28 +77,12 @@ int ipdb_reader_new(const char *file, ipdb_reader **reader) {
     unsigned int meta_length = 0;
     fread(&meta_length, sizeof(meta_length), 1, fd);
     meta_length = is_big_endian() ? meta_length : l2b(meta_length);
-    printf("is_big_endian: %d, file_size: %ld, meta_len: %d\n", is_big_endian(), fsize, meta_length);
 
     char *meta_json = (char *) malloc(meta_length + 1);
     meta_json[meta_length] = 0;
     fread(meta_json, sizeof(char), meta_length, fd);
-    printf("meta: %s\n", meta_json);
     rd->meta = parse_meta_data(meta_json);
     free(meta_json);
-    printf("build_time: %ld\n", rd->meta->build_time);
-    printf("ip_version: %hi\n", rd->meta->ip_version);
-    printf("node_count: %i\n", rd->meta->node_count);
-    printf("total_size: %i\n", rd->meta->total_size);
-    printf("fields: ");
-    for (int i = 0; i < rd->meta->fields_length; ++i) {
-        printf("%s ", rd->meta->fields[i]);
-    }
-    printf("\n");
-    printf("language: ");
-    for (int i = 0; i < rd->meta->language_length; ++i) {
-        printf("%s: %d ", rd->meta->language[i].name, rd->meta->language[i].offset);
-    }
-    printf("\n");
     if (rd->meta->language_length == 0 || rd->meta->fields_length == 0) {
         return ErrMetaData;
     }
@@ -193,7 +177,7 @@ int ipdb_search(ipdb_reader *reader, const u_char *ip, int bit_count, int *node)
 
 int ipdb_find0(ipdb_reader *reader, const char *addr, const char **body) {
     int node = 0;
-    int err = ErrNoErr;
+    int err;
     struct in_addr addr4;
     struct in6_addr addr6;
     if (inet_pton(AF_INET, addr, &addr4)) {
