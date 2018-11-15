@@ -249,7 +249,7 @@ int split(const char *src, const char sp, char ***result) {
     return sum;
 }
 
-int ipdb_find1(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_vector **body) {
+int ipdb_find1(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_chain **body) {
     int err;
     int off = -1;
     for (int i = 0; i < reader->meta->language_length; ++i) {
@@ -272,15 +272,15 @@ int ipdb_find1(ipdb_reader *reader, const char *addr, const char *language, ipdb
     if (off + reader->meta->fields_length > sum) {
         err = ErrDatabaseError;
     } else {
-        ipdb_string_vector *root = malloc(sizeof(ipdb_string_vector));
-        ipdb_string_vector *vector = root;
+        ipdb_string_chain *root = malloc(sizeof(ipdb_string_chain));
+        ipdb_string_chain *vector = root;
         for (int i = off; i < off + reader->meta->fields_length; ++i) {
             vector->str = malloc(strlen(tmp[i]) + 1);
             strcpy(vector->str, tmp[i]);
             if (i == off + reader->meta->fields_length - 1)break;
-            vector->next = malloc(sizeof(ipdb_string_vector));
+            vector->next = malloc(sizeof(ipdb_string_chain));
             vector = vector->next;
-            memset(vector, 0, sizeof(ipdb_string_vector));
+            memset(vector, 0, sizeof(ipdb_string_chain));
         }
         *body = root;
         err = ErrNoErr;
@@ -292,14 +292,14 @@ int ipdb_find1(ipdb_reader *reader, const char *addr, const char *language, ipdb
     return err;
 }
 
-int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_vector **body) {
+int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_chain **body) {
     return ipdb_find1(reader, addr, language, body);
 }
 
-void ipdb_string_vector_free(ipdb_string_vector **body) {
-    ipdb_string_vector *next = *body;
+void ipdb_string_chain_free(ipdb_string_chain **body) {
+    ipdb_string_chain *next = *body;
     while (next) {
-        ipdb_string_vector *temp = next->next;
+        ipdb_string_chain *temp = next->next;
         free(next);
         next = temp;
     }

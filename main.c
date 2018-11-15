@@ -9,28 +9,33 @@ int main() {
     int err = ipdb_reader_new("/root/cpp/ipdb-c/mydata6vipday4.ipdb", &reader);
     printf("err: %d\n", err);
     {
-        ipdb_string_vector *body;
+        ipdb_string_chain *body;
         err = ipdb_reader_find(reader, "2001:250:200::", "CN", &body);
         printf("\nerr: %d\n", err);
-        ipdb_string_vector *temp = body;
-        int i = 0;
-        while (temp) {
-            printf("%d: %s\n", ++i, temp->str);
-            temp = temp->next;
+        if (!err) {
+            ipdb_string_chain *temp = body;
+            int i = 0;
+            while (temp) {
+                printf("%d: %s\n", ++i, temp->str);
+                temp = temp->next;
+            }
         }
-        ipdb_string_vector_free(&body);
+        ipdb_string_chain_free(&body);
     }
     {
-        ipdb_string_vector *body;
+        ipdb_string_chain *body;
         err = ipdb_reader_find(reader, "2001:250:200::", "EN", &body);
         printf("\nerr: %d\n", err);
-        ipdb_string_vector *temp = body;
-        int i = 0;
-        while (temp) {
-            printf("%d: %s\n", ++i, temp->str);
-            temp = temp->next;
+        if (!err) {
+            ipdb_string_chain *temp = body;
+            int i = 0;
+            while (temp) {
+                printf("%d: %s\n", ++i, temp->str);
+                temp = temp->next;
+            }
         }
-        ipdb_string_vector_free(&body);
+        ipdb_string_chain_free(&body);
     }
+    ipdb_reader_free(&reader);
     return 0;
 }

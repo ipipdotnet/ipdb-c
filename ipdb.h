@@ -47,10 +47,10 @@ typedef struct ipdb_reader {
     unsigned char *data;
 } ipdb_reader;
 
-typedef struct ipdb_string_vector {
+typedef struct ipdb_string_chain {
     char *str;
-    struct ipdb_string_vector *next;
-} ipdb_string_vector;
+    struct ipdb_string_chain *next;
+} ipdb_string_chain;
 
 int ipdb_reader_new(const char *file, ipdb_reader **reader);
 
@@ -60,8 +60,8 @@ int ipdb_reader_is_ipv4_support(ipdb_reader *reader);
 
 int ipdb_reader_is_ipv6_support(ipdb_reader *reader);
 
-int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_vector **body);
+int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_chain **body);
 
-void ipdb_string_vector_free(ipdb_string_vector **body);
+void ipdb_string_chain_free(ipdb_string_chain **body);
 
 #endif //IPDB_C_IPDB_H
