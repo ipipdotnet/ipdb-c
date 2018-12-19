@@ -203,37 +203,7 @@ int ipdb_find0(ipdb_reader *reader, const char *addr, const char **body) {
     return err;
 }
 
-int split(const char *src, const char sp, char ***result) {
-    int sum = 1;
-    const char *c = src;
-    while (*c) {
-        if (*c == '\t')++sum;
-        ++c;
-    }
-    *result = malloc(sizeof(char *) * sum);
-    int i = 0;
-    size_t pos = 0;
-    c = src;
-    while (*(c + pos)) {
-        if (*(c + pos) == sp) {
-            (*result)[i] = malloc(pos + 1);
-            strncpy((*result)[i], c, pos);
-            (*result)[i][pos] = 0;
-            ++i;
-            c = c + pos + 1;
-            pos = 0;
-            continue;
-        }
-        ++pos;
-    }
-    size_t len = strlen(c);
-    (*result)[i] = malloc(len + 1);
-    if (len) strncpy((*result)[i], c, len);
-    (*result)[i][len] = 0;
-    return sum;
-}
-
-int ipdb_find1(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_chain **body) {
+int ipdb_find1(ipdb_reader *reader, const char *addr, const char *language, char *body) {
     int err;
     int off = -1;
     for (int i = 0; i < reader->meta->language_length; ++i) {
@@ -250,42 +220,31 @@ int ipdb_find1(ipdb_reader *reader, const char *addr, const char *language, ipdb
     if (err != ErrNoErr) {
         return err;
     }
+    size_t p = 0, o = 0, s = 0, e = 0;
+    int len = reader->meta->fields_length;
 
-    char **tmp;
-    int sum = split(content, '\t', &tmp);
-    if (off + reader->meta->fields_length > sum) {
+    while (*(content + p)) {
+        if (*(content + p) == '\t') {
+            ++o;
+        }
+        if ((!e) && o == off + len) {
+            e = p;
+        }
+        ++p;
+        if (off && (!s) && o == off) {
+            s = p;
+        }
+    }
+    if (!e) e = p;
+    if (off + len > o + 1) {
         err = ErrDatabaseError;
     } else {
-        ipdb_string_chain *root = malloc(sizeof(ipdb_string_chain));
-        ipdb_string_chain *vector = root;
-        for (int i = off; i < off + reader->meta->fields_length; ++i) {
-            vector->str = malloc(strlen(tmp[i]) + 1);
-            strcpy(vector->str, tmp[i]);
-            if (i == off + reader->meta->fields_length - 1)break;
-            vector->next = malloc(sizeof(ipdb_string_chain));
-            vector = vector->next;
-            memset(vector, 0, sizeof(ipdb_string_chain));
-        }
-        *body = root;
-        err = ErrNoErr;
+        strncpy(body, content + s, e - s);
+        body[e - s] = 0;
     }
-    for (int i = 0; i < sum; ++i) {
-        free(tmp[i]);
-    }
-    free(tmp);
     return err;
 }
 
-int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_chain **body) {
+int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, char *body) {
     return ipdb_find1(reader, addr, language, body);
-}
-
-void ipdb_string_chain_free(ipdb_string_chain **body) {
-    ipdb_string_chain *next = *body;
-    while (next) {
-        ipdb_string_chain *temp = next->next;
-        free(next);
-        next = temp;
-    }
-    *body = 0;
 }

@@ -47,11 +47,6 @@ typedef struct ipdb_reader {
     unsigned char *data;
 } ipdb_reader;
 
-typedef struct ipdb_string_chain {
-    char *str;
-    struct ipdb_string_chain *next;
-} ipdb_string_chain;
-
 int ipdb_reader_new(const char *file, ipdb_reader **reader);
 
 void ipdb_reader_free(ipdb_reader **reader);
@@ -60,8 +55,6 @@ int ipdb_reader_is_ipv4_support(ipdb_reader *reader);
 
 int ipdb_reader_is_ipv6_support(ipdb_reader *reader);
 
-int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, ipdb_string_chain **body);
-
-void ipdb_string_chain_free(ipdb_string_chain **body);
+int ipdb_reader_find(ipdb_reader *reader, const char *addr, const char *language, char *body);
 
 #endif //IPDB_C_IPDB_H

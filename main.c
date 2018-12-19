@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <memory.h>
+#include <sys/time.h>
 #include "ipdb.h"
 
 int main() {
@@ -21,24 +23,36 @@ int main() {
         }
         printf("\n");
 
+        char body[512];
+        char tmp[64];
         char *lang[2];
         lang[0] = "CN";
         lang[1] = "EN";
         for (int i = 0; i < 2; ++i) {
-            ipdb_string_chain *body;
-            err = ipdb_reader_find(reader, "2001:250:200::", lang[i], &body);
+            err = ipdb_reader_find(reader, "2001:250:200::", lang[i], body);
             printf("%s find err: %d\n", lang[i], err);
-            if (!err) {
-                ipdb_string_chain *temp = body;
-                int j = 0;
-                while (temp) {
-                    printf("%d: %s: %s\n", j + 1, reader->meta->fields[j], temp->str);
-                    ++j;
-                    temp = temp->next;
+            if (err) continue;
+            printf("%s\n", body);
+            int f = 0, p1 = 0, p2 = -1;
+            do {
+                if (*(body + p1) == '\t' || !*(body + p1)) {
+                    strncpy(tmp, body + p2 + 1, (size_t) p1 - p2);
+                    tmp[p1 - p2] = 0;
+                    printf("%d: %s: %s\n", f + 1, reader->meta->fields[f], tmp);
+                    p2 = p1;
+                    ++f;
                 }
-            }
-            ipdb_string_chain_free(&body);
+            } while (*(body + p1++));
         }
+        int x = 1000000;
+        struct timeval start, end;
+        gettimeofday(&start, NULL);
+        do {
+            ipdb_reader_find(reader, "2001:250:200::", "CN", body);
+        } while (--x);
+        gettimeofday(&end, NULL);
+        long timeuse = 1000000 * (end.tv_sec - start.tv_sec) + end.tv_usec - start.tv_usec;
+        printf("time used: %ldus.\n", timeuse);
     }
     ipdb_reader_free(&reader);
     return 0;
