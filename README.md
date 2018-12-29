@@ -3,12 +3,12 @@ IPIP.net officially supported IP database ipdb format parsing library
 
 ## Dependence
 ```sh
-dnf install json-c-devel
+dnf install jansson-devel
 ```
 
 ## Build & Run & Output
 ```sh
-gcc -std=gnu99 main.c ipdb.c -ljson-c -o main
+gcc -std=gnu99 main.c ipdb.c -ljansson -o main
 
 ./main
 

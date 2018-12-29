@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <memory.h>
-#include <json/json.h>
+#include <jansson.h>
 #include <arpa/inet.h>
 #include "ipdb.h"
 
@@ -24,36 +24,32 @@ unsigned int l2b(unsigned int x) {
 ipdb_meta_data *parse_meta_data(const char *meta_json) {
     ipdb_meta_data *meta_data = (ipdb_meta_data *) malloc(sizeof(ipdb_meta_data));
     memset(meta_data, 0, sizeof(ipdb_meta_data));
-    json_object *obj = json_tokener_parse(meta_json);
-    json_object *value;
-    json_object_object_get_ex(obj, "node_count", &value);
-    meta_data->node_count = json_object_get_int(value);
-    json_object_object_get_ex(obj, "total_size", &value);
-    meta_data->total_size = json_object_get_int(value);
-    json_object_object_get_ex(obj, "build", &value);
-    meta_data->build_time = json_object_get_int64(value);
-    json_object_object_get_ex(obj, "ip_version", &value);
-    meta_data->ip_version = (short) json_object_get_int(value);
-    json_object_object_get_ex(obj, "fields", &value);
-    meta_data->fields_length = json_object_array_length(value);
+    json_error_t err;
+    json_t* obj = json_loads(meta_json, 0, &err);
+    meta_data->node_count = (int)json_integer_value(json_object_get(obj, "node_count"));
+    meta_data->total_size = (int)json_integer_value(json_object_get(obj, "total_size"));
+    meta_data->build_time = (long)json_integer_value(json_object_get(obj, "build"));
+    meta_data->ip_version = (short)json_integer_value(json_object_get(obj, "ip_version"));
+    json_t* fields = json_object_get(obj, "fields");
+    meta_data->fields_length = (int)json_array_size(fields);
     meta_data->fields = (char **) malloc(sizeof(char *) * meta_data->fields_length);
     for (int i = 0; i < meta_data->fields_length; ++i) {
-        json_object *it = json_object_array_get_idx(value, i);
-        meta_data->fields[i] = malloc(sizeof(char) * json_object_get_string_len(it) + 1);
-        strcpy(meta_data->fields[i], json_object_get_string(it));
+        json_t* it = json_array_get(fields, i);
+        meta_data->fields[i] = malloc(sizeof(char) * json_string_length(it) + 1);
+        strcpy(meta_data->fields[i], json_string_value(it));
     }
-    json_object_object_get_ex(obj, "languages", &value);
-    meta_data->language_length = json_object_object_length(value);
+    json_t* languages = json_object_get(obj, "languages");
+    meta_data->language_length = (int)json_object_size(languages);
     meta_data->language = (ipdb_meta_data_language *) malloc(
             sizeof(ipdb_meta_data_language) * meta_data->language_length);
-    struct json_object_iterator language = json_object_iter_begin(value);
+    void* language = json_object_iter(languages);
     for (int i = 0; i < meta_data->language_length; ++i) {
-        strcpy(meta_data->language[i].name, json_object_iter_peek_name(&language));
-        struct json_object *it = json_object_iter_peek_value(&language);
-        meta_data->language[i].offset = json_object_get_int(it);
-        json_object_iter_next(&language);
+        strcpy(meta_data->language[i].name, json_object_iter_key(language));
+        json_t *it = json_object_iter_value(language);
+        meta_data->language[i].offset = (int)json_integer_value(it);
+        json_object_iter_next(languages, language);
     }
-    json_object_iter_end(value);
+    json_decref(obj);
     return meta_data;
 }
 
