@@ -4,9 +4,20 @@
 #include <sys/time.h>
 #include "ipdb.h"
 
-int main() {
+int main(const int argc, const char ** argv) {
+
+	char * defaultDB = "/root/cpp/ipdb-c/mydata6vipday4.ipdb";
+	char * db;
+
+	if (argc == 1) {
+		db = defaultDB;
+	}
+	else {
+		db = (char *) argv[1];
+	}
+
     ipdb_reader *reader;
-    int err = ipdb_reader_new("/root/cpp/ipdb-c/mydata6vipday4.ipdb", &reader);
+    int err = ipdb_reader_new(db, &reader);
     printf("new ipdb reader err: %d\n", err);
     if (!err) {
         printf("ipdb build time: %li\n", reader->meta->build_time);
