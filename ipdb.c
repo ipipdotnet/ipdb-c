@@ -54,6 +54,7 @@ ipdb_meta_data *parse_meta_data(const char *meta_json) {
         json_object_iter_next(&language);
     }
     json_object_iter_end(value);
+    json_object_put(obj);
     return meta_data;
 }
 
