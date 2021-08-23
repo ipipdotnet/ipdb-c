@@ -162,7 +162,7 @@ int ipdb_search(ipdb_reader *reader, const u_char *ip, int bit_count, int *node)
     }
 
     for (int i = 0; i < bit_count; ++i) {
-        if (*node > reader->meta->node_count) {
+        if (*node >= reader->meta->node_count) {
             break;
         }
 
@@ -170,7 +170,7 @@ int ipdb_search(ipdb_reader *reader, const u_char *ip, int bit_count, int *node)
                                ((0xFF & ((int) ip[i >> 3])) >> (unsigned int) (7 - (i % 8))) & 1);
     }
 
-    if (*node > reader->meta->node_count) {
+    if (*node >= reader->meta->node_count) {
         return ErrNoErr;
     }
     return ErrDataNotExists;
